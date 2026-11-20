@@ -1,7 +1,11 @@
+import json
 import math
+from dataclasses import asdict
+from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+from safetensors.torch import load_model, save_model
 from torch import nn
 
 from ullm.config import ModelConfig
@@ -114,3 +118,15 @@ class GPT(nn.Module):
         for layer in self.layers:
             x = layer(x, self.rope_cos, self.rope_sin)
         return self.head(self.norm(x))
+
+    def save(self, directory: Path) -> None:
+        directory.mkdir(parents=True, exist_ok=True)
+        save_model(self, str(directory / "model.safetensors"))
+        (directory / "config.json").write_text(json.dumps(asdict(self.config), indent=2))
+
+    @classmethod
+    def load(cls, directory: Path, device: str | torch.device = "cpu") -> "GPT":
+        config = ModelConfig(**json.loads((directory / "config.json").read_text()))
+        model = cls(config).to(device)
+        load_model(model, str(directory / "model.safetensors"), device=str(device))
+        return model

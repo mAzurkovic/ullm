@@ -11,7 +11,7 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
   - `ullm complete` and `ullm chat` stream tokens on CPU and MPS.
 - Needs: none.
 - Features:
-  - F1. Model: uv project, config.py, model.py, shape tests. Docs: tasks. Needs: none. Status: not started.
+  - F1. Model: uv project, config.py, model.py, shape tests. Docs: tasks. Needs: none. Status: done.
   - F2. CLI: tokenizer.py, generate.py, `complete` and `chat`, safetensors save and load. Docs: tasks. Needs: F1. Status: not started.
 
 ## M2. Data
