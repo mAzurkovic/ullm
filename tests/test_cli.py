@@ -5,7 +5,7 @@ import sys
 import pytest
 import torch
 
-from ullm.cli import main, trim_history
+from ullm.cli import chat_loop, main, trim_history
 from ullm.config import ModelConfig
 from ullm.generate import generate
 from ullm.model import GPT
@@ -107,7 +107,13 @@ def test_runs_as_module():
 
 
 @pytest.mark.parametrize(
-    "flags", [["--temperature", "-1"], ["--top-k", "-1"], ["--max-new-tokens", "0"]]
+    "flags",
+    [
+        ["--temperature", "-1"],
+        ["--temperature", "nan"],
+        ["--top-k", "-1"],
+        ["--max-new-tokens", "0"],
+    ],
 )
 def test_rejects_invalid_sampling_flags(checkpoint, flags):
     with pytest.raises(SystemExit) as exit_info:
@@ -139,3 +145,20 @@ def test_rejects_missing_checkpoint(tmp_path, capsys):
         main(["complete", "Hi", "--model", str(tmp_path / "missing")])
     assert exit_info.value.code == 2
     assert "no checkpoint" in capsys.readouterr().err
+
+
+def test_chat_loop_sends_history_and_new_message(monkeypatch):
+    monkeypatch.setattr("sys.stdin", io.StringIO("Hi\nHow are you?\n"))
+    prompts = []
+
+    def reply(ids: list[int], stop_ids) -> str:
+        prompts.append((ids, set(stop_ids)))
+        return "ok"
+
+    chat_loop(reply, context_length=1024)
+
+    history = [Message("user", "Hi"), Message("assistant", "ok"), Message("user", "How are you?")]
+    assert prompts == [
+        (render_chat(history[:1])[0] + [ASSISTANT], {END}),
+        (render_chat(history)[0] + [ASSISTANT], {END}),
+    ]

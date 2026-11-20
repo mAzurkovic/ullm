@@ -1,5 +1,5 @@
 import argparse
-from collections.abc import Collection, Sequence
+from collections.abc import Callable, Collection, Sequence
 from pathlib import Path
 
 import torch
@@ -14,7 +14,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.command == "complete" and not args.prompt:
         parser.error("prompt must not be empty")
-    if args.temperature < 0 or args.top_k < 0 or args.max_new_tokens < 1:
+    if not args.temperature >= 0 or args.top_k < 0 or args.max_new_tokens < 1:
         parser.error("need --temperature >= 0, --top-k >= 0, --max-new-tokens >= 1")
     if not (args.model / "config.json").is_file():
         parser.error(f"no checkpoint at {args.model}")
@@ -33,7 +33,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         if args.command == "complete":
             reply(encode(args.prompt), {ENDOFTEXT})
         else:
-            _chat(reply, model.config.context_length)
+            chat_loop(reply, model.config.context_length)
     except KeyboardInterrupt:
         print()
 
@@ -44,7 +44,7 @@ def trim_history(history: list[Message], context_length: int) -> list[Message]:
     return history
 
 
-def _chat(reply, context_length: int) -> None:
+def chat_loop(reply: Callable[[list[int], Collection[int]], str], context_length: int) -> None:
     history: list[Message] = []
     while True:
         try:
