@@ -98,7 +98,7 @@ class GPT(nn.Module):
 
     def _init_weights(self) -> None:
         # Residual projections are scaled down so the residual stream variance
-        # does not grow with depth (GPT-2).
+        # does not grow with depth.
         residual_std = INIT_STD / math.sqrt(2 * self.config.n_layers)
         for name, p in self.named_parameters():
             if name.endswith(("attn.wo.weight", "mlp.w2.weight")):
