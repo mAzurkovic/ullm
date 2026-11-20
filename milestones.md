@@ -12,7 +12,7 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
 - Needs: none.
 - Features:
   - F1. Model: uv project, config.py, model.py, shape tests. Docs: tasks. Needs: none. Status: done.
-  - F2. CLI: tokenizer.py, generate.py, `complete` and `chat`, safetensors save and load. Docs: tasks. Needs: F1. Status: not started.
+  - F2. CLI: tokenizer.py, generate.py, `complete` and `chat`, safetensors save and load. Docs: tasks. Needs: F1. Status: done.
 
 ## M2. Data
 - Delivers: FineWeb-Edu shards on HF Hub and a loader for them.
