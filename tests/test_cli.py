@@ -2,11 +2,13 @@ import io
 import subprocess
 import sys
 
+import numpy as np
 import pytest
 import torch
 
 from ullm.cli import chat_loop, main, trim_history
 from ullm.config import ModelConfig
+from ullm.data import shard_path
 from ullm.generate import generate
 from ullm.model import GPT
 from ullm.tokenizer import ASSISTANT, END, Message, decode, encode, render_chat
@@ -168,3 +170,29 @@ def test_module_does_not_run_cli_when_imported_by_worker_processes():
     code = "import runpy; runpy.run_module('ullm', run_name='__mp_main__')"
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_pretrain_help_lists_model_and_training_flags(capsys):
+    with pytest.raises(SystemExit):
+        main(["pretrain", "--help"])
+    out = capsys.readouterr().out
+    assert all(flag in out for flag in ["--n-layers", "--peak-lr", "--micro-batch", "--resume"])
+
+
+def test_pretrain_command_trains_from_flags(tmp_path):
+    data = tmp_path / "shards"
+    data.mkdir()
+    for i in range(2):
+        np.random.default_rng(i).integers(0, 50257, 600, dtype=np.uint16).tofile(
+            shard_path(data, i)
+        )
+    flags = {
+        "--n-layers": "1", "--d-model": "16", "--n-heads": "2", "--mlp-hidden": "32",
+        "--context-length": "8", "--run": "cli", "--data": str(data),
+        "--results-dir": str(tmp_path / "results"), "--checkpoints-dir": str(tmp_path / "ckpt"),
+        "--batch-tokens": "16", "--micro-batch": "2", "--max-tokens": "64",
+        "--warmup-steps": "1", "--device": "cpu",
+    }  # fmt: skip
+    main(["pretrain", *[part for pair in flags.items() for part in pair]])
+    assert GPT.load(tmp_path / "ckpt" / "cli" / "final").config.n_layers == 1
+    assert (tmp_path / "results" / "cli" / "metrics.csv").is_file()

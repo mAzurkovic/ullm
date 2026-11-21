@@ -5,10 +5,12 @@ from pathlib import Path
 
 import torch
 
+from ullm.config import ModelConfig, PretrainConfig, add_config_args, config_from_args
 from ullm.data import prepare_pretrain
 from ullm.generate import generate
-from ullm.model import GPT
+from ullm.model import GPT, default_device
 from ullm.tokenizer import ASSISTANT, END, ENDOFTEXT, Message, StreamDecoder, encode, render_chat
+from ullm.train import pretrain
 
 
 def main(argv: Sequence[str] | None = None) -> None:
@@ -17,6 +19,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     if args.command == "prepare":
         prepare_pretrain(args.out, args.num_shards, args.workers, args.push)
         return
+    if args.command == "pretrain":
+        pretrain(config_from_args(ModelConfig, args), config_from_args(PretrainConfig, args))
+        return
     if args.command == "complete" and not args.prompt:
         parser.error("prompt must not be empty")
     if not args.temperature >= 0 or args.top_k < 0 or args.max_new_tokens < 1:
@@ -24,7 +29,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     if not (args.model / "config.json").is_file():
         parser.error(f"no checkpoint at {args.model}")
 
-    model = GPT.load(args.model, args.device or _default_device()).eval()
+    model = GPT.load(args.model, args.device or default_device()).eval()
     generator = torch.Generator()
     if args.seed is None:
         generator.seed()
@@ -90,14 +95,6 @@ def _stream(
     return "".join(pieces)
 
 
-def _default_device() -> str:
-    if torch.cuda.is_available():
-        return "cuda"
-    if torch.backends.mps.is_available():
-        return "mps"
-    return "cpu"
-
-
 def _parser() -> argparse.ArgumentParser:
     sampling = argparse.ArgumentParser(add_help=False)
     sampling.add_argument("--model", type=Path, required=True, help="checkpoint directory")
@@ -117,4 +114,7 @@ def _parser() -> argparse.ArgumentParser:
     prepare.add_argument("--num-shards", type=int, default=71)
     prepare.add_argument("--workers", type=int, default=os.cpu_count())
     prepare.add_argument("--push", metavar="REPO", help="HF Hub dataset repo to upload to")
+    pretrain_parser = commands.add_parser("pretrain", help="pre-train the base model")
+    add_config_args(pretrain_parser, ModelConfig)
+    add_config_args(pretrain_parser, PretrainConfig)
     return parser

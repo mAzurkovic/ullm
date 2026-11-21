@@ -153,14 +153,18 @@ class TokenLoader:
         rank: int = 0,
         world_size: int = 1,
         device: str | torch.device = "cpu",
+        start_batch: int = 0,
     ) -> None:
         if not paths:
             raise ValueError("need at least one shard")
+        if start_batch < 0:
+            raise ValueError(f"start_batch {start_batch} must not be negative")
         if not 0 <= rank < world_size:
             raise ValueError(f"rank {rank} out of range for world size {world_size}")
         self.batch_size = batch_size
         self.context_length = context_length
         self.rank = rank
+        self.start_batch = start_batch
         self.step_tokens = batch_size * context_length * world_size
         self.device = torch.device(device)
         self.shards = [np.memmap(path, dtype=SHARD_DTYPE, mode="r") for path in paths]
@@ -172,9 +176,15 @@ class TokenLoader:
 
     def __iter__(self) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
         block = self.batch_size * self.context_length
+        counts = [len(range(0, len(s) - self.step_tokens, self.step_tokens)) for s in self.shards]
+        skip = self.start_batch % sum(counts)
         while True:
-            for shard in self.shards:
-                for start in range(0, len(shard) - self.step_tokens, self.step_tokens):
+            for shard, count in zip(self.shards, counts, strict=True):
+                if skip >= count:
+                    skip -= count
+                    continue
+                begin, skip = skip * self.step_tokens, 0
+                for start in range(begin, len(shard) - self.step_tokens, self.step_tokens):
                     first = start + self.rank * block
                     tokens = torch.from_numpy(shard[first : first + block + 1].astype(np.int64))
                     tokens = self._to_device(tokens)
