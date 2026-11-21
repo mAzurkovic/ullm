@@ -4,7 +4,7 @@ Scope: the real pre-training run on 8×H100 SXM, a first try of `ullm complete`,
 
 ## 1. Model repo and card are ready [serial]
 - [ ] 1.1 User creates the public model repo: `hf repo create mattiasz/ullm-base --repo-type model`. Repo visible on the Hub.
-- [ ] 1.2 Claude writes `docs/model-card-base.md`: what the model is (360M decoder-only GPT, RoPE, RMSNorm, SwiGLU, context 1024, GPT-2 tokenizer + 3 chat tokens), training data (FineWeb-Edu `sample-10BT`, 7B tokens, ODC-By, credit), training setup and cost, how to run it with `ullm complete`, limits (base model: continues text, wrong facts, English only), license. File committed.
+- [x] 1.2 Claude writes `docs/model-card-base.md`: what the model is (360M decoder-only GPT, RoPE, RMSNorm, SwiGLU, context 1024, GPT-2 tokenizer + 3 chat tokens), training data (FineWeb-Edu `sample-10BT`, 7B tokens, ODC-By, credit), training setup and cost, how to run it with `ullm complete`, limits (base model: continues text, wrong facts, English only), license. File committed.
 
 ## 2. The 8×H100 node is ready [serial, needs 1]
 - [ ] 2.1 User rents an on-demand 8×H100 SXM node (Vast.ai or RunPod), ~80 GB disk, CUDA 13+. Node price per hour noted.
@@ -28,4 +28,4 @@ Scope: the real pre-training run on 8×H100 SXM, a first try of `ullm complete`,
 - 4 needs 3.
 
 ## Open questions
-- OQ-L. License for the published weights. Recommend Apache-2.0 (permissive; FineWeb-Edu credit stays in the card per ODC-By). Owner: user, before 1.2.
+- OQ-L. License: Apache-2.0 (decided). FineWeb-Edu credit stays in the card per ODC-By.
