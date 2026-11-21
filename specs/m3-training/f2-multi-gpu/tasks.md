@@ -23,8 +23,8 @@ Scope: `torchrun` multi-process training, bf16 autocast and `torch.compile` on C
 - [x] 4.2 README "Train on a GPU node": rent (Vast.ai on-demand H100, ~80 GB disk, CUDA 13+), SSH in, install `uv`, clone, `uv sync`, check the GPU with `nvidia-smi`, `torchrun --nproc_per_node=N -m ullm pretrain --compile --hourly-rate ...` inside `tmux`, watch logs, resume after a disconnect, copy `results/<run>/` back with `scp`, destroy the instance. Written so the user can follow it alone.
 
 ## 5. 1×H100 test run [serial, needs 4]
-- [ ] 5.1 User rents a 1×H100 on Vast.ai (on-demand) and runs the README commands over SSH; Claude reads the pasted output. Full 360M model, `--compile`, a few hundred steps with checkpoint and `--resume` once. Within the ~$25 test budget.
-- [ ] 5.2 Record GPU model (SXM or PCIe), tok/s, MFU, and the projected 8×H100 time and cost for 7B tokens in `results/<run>/`; check it fits R1. Commit `results/<run>/`. Terminate the instance; delete shards and checkpoints.
+- [x] 5.1 User rents a 1×H100 on Vast.ai (on-demand) and runs the README commands over SSH; Claude reads the pasted output. Full 360M model, `--compile`, a few hundred steps with checkpoint and `--resume` once. Within the ~$25 test budget.
+- [x] 5.2 Record GPU model (SXM or PCIe), tok/s, MFU, and the projected 8×H100 time and cost for 7B tokens in `results/<run>/`; check it fits R1. Commit `results/<run>/`. Terminate the instance; delete shards and checkpoints.
 
 ## Dependencies
 - 2 and 3 need 1.
