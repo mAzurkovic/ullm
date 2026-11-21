@@ -39,36 +39,47 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
   - F2. Multi-GPU + test run: DDP, bf16, torch.compile, cost/ETA, 1×H100 test run. Docs: tasks. Needs: F1. Status: done.
 
 ## M4. Base model
-- Delivers: trained base model that beats GPT-2 small, weights on HF Hub.
-- Builds: eval.py (lm-eval, generation test), prompts.py, cli.py (`eval`).
-- Covers: R1, R2a, R5.
+- Delivers: trained base model, weights on HF Hub, `ullm complete` works on it.
+- Builds: no new code; uses `ullm pretrain` and the README GPU guide.
+- Covers: R1, R5.
 - Exit criteria:
-  - HellaSwag and WikiText beat GPT-2 small.
-  - Generation test passes human judgment.
-  - Run cost ≤ $75.
+  - Real run finishes on 8×H100, cost ≤ $75, wall-clock ≤ 24 h.
+  - `ullm complete` gives fluent continuations.
+  - Weights on HF Hub.
 - Needs: M3.
 - Features:
-  - F1. Eval: lm-eval adapter, GPT-2 baseline, generation test, prompts frozen. Docs: tasks. Needs: M1 F2. Parallel with: M2, M3. Status: not started.
-  - F2. Real run: 8×H100 pre-train, eval, publish weights. Docs: tasks. Needs: M3 F2, F1. Status: not started.
+  - F1. Real run: 8×H100 pre-train, try `ullm complete`, publish weights. Docs: tasks. Needs: M3 F2. Status: not started.
 
 ## M5. Assistant
 - Delivers: assistant model that chats, weights on HF Hub.
-- Builds: data.py (prepare_sft()), train.py (SFT mode), cli.py (`sft`), eval.py (assistant test).
-- Covers: R2b, R5.
+- Builds: data.py (prepare_sft()), train.py (SFT mode), cli.py (`sft`).
+- Covers: R2b (chat format), R5.
 - Exit criteria:
-  - Assistant test passes human judgment: answers, stops on `<|end|>`.
+  - `ullm chat` answers and stops on `<|end|>`.
   - Weights on HF Hub, README has one command per stage.
 - Needs: M4.
 - Features:
-  - F1. SFT: smol-smoltalk prep with loss mask, masked-loss training, 1×H100 run. Docs: tasks. Needs: M4 F2. Status: not started.
-  - F2. Assistant eval + publish: assistant test, publish weights, README. Docs: tasks. Needs: F1, M4 F1. Status: not started.
+  - F1. SFT: smol-smoltalk prep with loss mask, masked-loss training, 1×H100 run. Docs: tasks. Needs: M4 F1. Status: not started.
+  - F2. Publish: assistant weights on HF Hub, README. Docs: tasks. Needs: F1. Status: not started.
+
+## M6. Evaluation (P1, last)
+- Delivers: benchmark scores beside GPT-2 small and judged generation tests for both models.
+- Builds: eval.py (lm-eval, generation test, assistant test), prompts.py, cli.py (`eval`).
+- Covers: R2a, R2b (judged tests).
+- Exit criteria:
+  - HellaSwag and WikiText beat GPT-2 small.
+  - Generation test and assistant test pass human judgment.
+- Needs: M4 (base eval), M5 (assistant eval).
+- Features:
+  - F1. Base eval: lm-eval adapter, GPT-2 baseline, generation test. Docs: tasks (`specs/m4-base-model/f1-eval/`). Needs: M4 F1. Status: in progress, parked on branch `eval` (2.1 open: how to score GPT-2).
+  - F2. Assistant eval: 20 prompts + 3 conversations, results.md. Docs: tasks. Needs: F1, M5 F1. Status: not started.
 
 ## Coverage
 | Requirement or component | Milestones |
 |---|---|
 | R1 | M3, M4 |
-| R2a | M4 |
-| R2b | M5 |
+| R2a | M6 |
+| R2b | M5, M6 |
 | R3 | M2 |
 | R4 | M1 |
 | R5 | M2, M4, M5 |
@@ -76,9 +87,9 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
 | config.py, model.py, tokenizer.py, generate.py | M1 |
 | data.py | M2, M5 |
 | train.py | M3, M5 |
-| eval.py, prompts.py | M4, M5 |
-| cli.py | M1 to M5 |
+| eval.py, prompts.py | M6 |
+| cli.py | M1 to M6 |
 
 ## Open Questions
 - OQ1. GPU provider. Owner: user. Needed by M3 F2.
-- OQ5. HF Hub repo names for weights. Owner: user. Needed by M4 F2. Shards: `mattiasz/ullm-fineweb-edu-shards`.
+- OQ5. HF Hub repo names. Shards: `mattiasz/ullm-fineweb-edu-shards`. Base: `mattiasz/ullm-base`. Assistant: decide at M5.
