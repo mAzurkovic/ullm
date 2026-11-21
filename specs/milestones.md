@@ -23,8 +23,8 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
   - Loader test passes: 1025-token windows, disjoint per-GPU slices.
 - Needs: M1.
 - Features:
-  - F1. Prepare: download, tokenize, write shards, push to HF Hub. Docs: tasks. Needs: M1 F2. Parallel with: F2. Status: not started.
-  - F2. Loader: memmap shards into batches, tested on a synthetic shard. Docs: tasks. Needs: M1 F1. Parallel with: F1. Status: not started.
+  - F1. Prepare: download, tokenize, write shards, push to HF Hub. Docs: tasks. Needs: M1 F2. Parallel with: F2. Status: done.
+  - F2. Loader: memmap shards into batches, tested on a synthetic shard. Docs: tasks. Needs: M1 F1. Parallel with: F1. Status: done.
 
 ## M3. Training
 - Delivers: pre-train loop that works on CPU and on 1×H100.

@@ -17,8 +17,8 @@ Scope: `ullm prepare` on the Mac: download FineWeb-Edu `sample-10BT` one parquet
 - [x] 3.2 Print progress: shards written, tokens, elapsed. Test: `prepare` with the HF download mocked to small parquet files writes shards the `TokenLoader` reads.
 
 ## 4. Real shards on the Hub [serial, needs 3]
-- [ ] 4.1 User runs `ullm prepare --push mattiasz/ullm-fineweb-edu-shards` in their own terminal on the Mac. 71 shards uploaded, dataset card visible.
-- [ ] 4.2 `download_shards()` into a fresh temp dir; `split_shards()` and `TokenLoader` read it. Delete local raw data and shards after.
+- [x] 4.1 User runs `ullm prepare --push mattiasz/ullm-fineweb-edu-shards` in their own terminal on the Mac. 71 shards uploaded, dataset card visible.
+- [x] 4.2 `download_shards()` into a fresh temp dir; `split_shards()` and `TokenLoader` read it. Delete local raw data and shards after.
 
 ## Dependencies
 - 2 needs 1.1.
