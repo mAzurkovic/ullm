@@ -64,8 +64,8 @@ assets/          # logo and banner
 ## Docs
 
 - [intro.md](intro.md): background and motivation
-- [design.md](design.md): requirements and technical design
-- [milestones.md](milestones.md): build plan
+- [design.md](specs/design.md): requirements and technical design
+- [milestones.md](specs/milestones.md): build plan
 
 ## References
 
