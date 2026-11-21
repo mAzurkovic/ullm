@@ -81,4 +81,4 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
 
 ## Open Questions
 - OQ1. GPU provider. Owner: user. Needed by M3 F2.
-- OQ5. HF Hub repo names. Owner: user. Needed by M2 F1.
+- OQ5. HF Hub repo names for weights. Owner: user. Needed by M4 F2. Shards: `mattiasz/ullm-fineweb-edu-shards`.
