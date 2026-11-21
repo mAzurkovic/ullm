@@ -162,3 +162,9 @@ def test_chat_loop_sends_history_and_new_message(monkeypatch):
         (render_chat(history[:1])[0] + [ASSISTANT], {END}),
         (render_chat(history)[0] + [ASSISTANT], {END}),
     ]
+
+
+def test_module_does_not_run_cli_when_imported_by_worker_processes():
+    code = "import runpy; runpy.run_module('ullm', run_name='__mp_main__')"
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
