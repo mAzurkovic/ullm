@@ -10,7 +10,7 @@ With the prevalence of AI these days, I want to apply this principle to LLMs. **
 
 ## Requirements and Design
 
-See [design.md](design.md).
+See [specs/design.md](specs/design.md).
 
 ---
 

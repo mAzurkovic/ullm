@@ -147,7 +147,8 @@ ullm/
     cli.py         # ullm complete | chat | prepare | pretrain | sft | eval
   tests/           # pytest: model shapes, render_chat mask, tiny CPU overfit
   results/<run>/
-  intro.md, design.md
+  intro.md
+  specs/           # design.md, milestones.md, per-feature tasks
 ```
 
 - Python 3.12, `uv` with `uv.lock`.
