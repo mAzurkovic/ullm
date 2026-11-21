@@ -63,4 +63,4 @@ It runs on CUDA, Apple Silicon (MPS), or CPU. For question answering, give it a 
 
 ## Credit and license
 
-Training data: FineWeb-Edu by Hugging Face, derived from Common Crawl, released under ODC-By 1.0. The weights and code are released under Apache-2.0.
+Training data: FineWeb-Edu by Hugging Face, derived from Common Crawl, released under ODC-By 1.0. These weights are released under Apache-2.0.
