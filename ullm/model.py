@@ -130,3 +130,11 @@ class GPT(nn.Module):
         model = cls(config).to(device)
         load_model(model, str(directory / "model.safetensors"), device=str(device))
         return model
+
+
+def default_device() -> str:
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"

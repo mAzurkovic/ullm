@@ -97,3 +97,19 @@ def test_rejects_invalid_rank(tmp_path, rank, world_size):
     path = write_shard(tmp_path, 0, 100)
     with pytest.raises(ValueError):
         TokenLoader([path], batch_size=2, context_length=3, rank=rank, world_size=world_size)
+
+
+@pytest.mark.parametrize("start_batch", [0, 1, 2, 3, 4, 7, 11])
+def test_start_batch_equals_skipping_batches(tmp_path, start_batch):
+    shards = [write_shard(tmp_path, 0, 30), write_shard(tmp_path, 1, 50, first=1000)]
+    settings = dict(batch_size=2, context_length=3, rank=1, world_size=2)
+    skipped = islice(iter(TokenLoader(shards, **settings)), start_batch, start_batch + 5)
+    started = islice(iter(TokenLoader(shards, **settings, start_batch=start_batch)), 5)
+    for (xa, ya), (xb, yb) in zip(skipped, started, strict=True):
+        assert torch.equal(xa, xb) and torch.equal(ya, yb)
+
+
+def test_rejects_negative_start_batch(tmp_path):
+    path = write_shard(tmp_path, 0, 100)
+    with pytest.raises(ValueError):
+        TokenLoader([path], batch_size=2, context_length=3, start_batch=-1)
