@@ -198,5 +198,5 @@ flowchart LR
 
 ## Open Questions
 
-- OQ1. GPU provider. Compare current 8×H100 SXM prices on Lambda, RunPod, Vast.ai right before the run. Owner: user.
+- OQ1. GPU provider. 1×H100 test run: Vast.ai on-demand (Lambda 1× needs a 1-week reservation; Lambda 8× out of capacity 2026-11-21). 8×H100 real run: compare Lambda, RunPod, Vast.ai right before the run. Owner: user.
 - OQ5. HF Hub repo names for weights. Owner: user, at the end. Shards: `mattiasz/ullm-fineweb-edu-shards` (decided).
