@@ -35,7 +35,7 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
   - 1×H100 test run within ~$25. Measured tok/s projects the real run within $75.
 - Needs: M2.
 - Features:
-  - F1. Loop: AdamW, schedule, logging, val loss, samples, checkpoints, overfit test. Docs: tasks. Needs: M1 F1, M2 F2. Status: not started.
+  - F1. Loop: AdamW, schedule, logging, val loss, samples, checkpoints, overfit test. Docs: tasks. Needs: M1 F1, M2 F2. Status: done.
   - F2. Multi-GPU + test run: DDP, bf16, torch.compile, cost/ETA, 1×H100 test run. Docs: tasks. Needs: F1. Status: not started.
 
 ## M4. Base model

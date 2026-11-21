@@ -27,6 +27,7 @@ class ModelConfig:
 class PretrainConfig:
     run: str = "pretrain"
     data: Path = Path("data/shards")
+    shards_repo: str = ""
     results_dir: Path = Path("results")
     checkpoints_dir: Path = Path("checkpoints")
     batch_tokens: int = 512 * 1024
@@ -46,18 +47,23 @@ class PretrainConfig:
     val_batches: int = 20
     seed: int = 0
     device: str = "auto"
+    compile: bool = False
+    hourly_rate: float = 0.0
+    budget: float = 75.0
+    budget_check_step: int = 200
+    gpu_peak_tflops: float = 989.0
     resume: bool = False
 
     @property
     def total_steps(self) -> int:
         return self.max_tokens // self.batch_tokens
 
-    def grad_accum_steps(self, context_length: int) -> int:
-        micro_tokens = self.micro_batch * context_length
+    def grad_accum_steps(self, context_length: int, world_size: int = 1) -> int:
+        micro_tokens = self.micro_batch * context_length * world_size
         if micro_tokens < 1 or self.batch_tokens % micro_tokens:
             raise ValueError(
-                f"batch of {self.batch_tokens} tokens is not a multiple of "
-                f"micro-batch {self.micro_batch} x context {context_length}"
+                f"batch of {self.batch_tokens} tokens is not a multiple of micro-batch "
+                f"{self.micro_batch} x context {context_length} x {world_size} processes"
             )
         return self.batch_tokens // micro_tokens
 

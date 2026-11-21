@@ -3,6 +3,9 @@ import csv
 import json
 import math
 import shutil
+import socket
+import subprocess
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -265,3 +268,148 @@ def test_resume_keeps_samples_that_contain_header_text(tmp_path, shards):
     shutil.rmtree(tmp_path / "checkpoints" / "tiny" / "step_000008")
     pretrain(TINY, replace(config, resume=True))
     assert "--- step 1: mix the flour" in samples.read_text()
+
+
+def test_grad_accum_steps_divide_the_batch_across_processes():
+    assert PretrainConfig(micro_batch=16).grad_accum_steps(1024, world_size=8) == 4
+    with pytest.raises(ValueError):
+        PretrainConfig(micro_batch=48).grad_accum_steps(1024, world_size=8)
+
+
+def run_pretrain_cli(tmp_path: Path, shards: Path, run: str, nproc: int, **flags) -> Path:
+    settings = {
+        "--n-layers": "2", "--d-model": "16", "--n-heads": "2", "--mlp-hidden": "32",
+        "--context-length": "8", "--run": run, "--data": str(shards),
+        "--results-dir": str(tmp_path / "results"), "--checkpoints-dir": str(tmp_path / "ckpt"),
+        "--batch-tokens": "32", "--max-tokens": str(32 * 6), "--warmup-steps": "2",
+        "--log-every": "2", "--val-every": "3", "--sample-every": "6", "--checkpoint-every": "3",
+        "--val-batches": "2", "--device": "cpu",
+    } | flags  # fmt: skip
+    args = [
+        part for flag, value in settings.items() for part in ([flag, value] if value else [flag])
+    ]
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    launcher = [
+        sys.executable, "-m", "torch.distributed.run", "--nnodes=1", f"--nproc_per_node={nproc}",
+        "--master_addr=127.0.0.1", f"--master_port={port}",
+    ]  # fmt: skip
+    result = subprocess.run(
+        [*launcher, "-m", "ullm", "pretrain", *args], capture_output=True, text=True, timeout=120
+    )
+    assert result.returncode == 0, result.stderr[-3000:]
+    return tmp_path / "ckpt" / run
+
+
+def test_two_processes_match_one_process_with_same_global_batch(tmp_path, shards):
+    one = run_pretrain_cli(tmp_path, shards, "one", nproc=1, **{"--micro-batch": "2"})
+    two = run_pretrain_cli(tmp_path, shards, "two", nproc=2, **{"--micro-batch": "2"})
+    a, b = GPT.load(one / "final"), GPT.load(two / "final")
+    for pa, pb in zip(a.parameters(), b.parameters(), strict=True):
+        torch.testing.assert_close(pa, pb, rtol=1e-5, atol=1e-6)
+    assert sorted(p.name for p in two.iterdir()) == ["final", "step_000003", "step_000006"]
+    rows = read_metrics(tmp_path / "results" / "two")
+    assert [int(r["step"]) for r in rows if r["split"] == "train"] == [2, 4, 6]
+    assert [int(r["step"]) for r in rows if r["split"] == "val"] == [3, 6]
+
+
+def test_two_processes_resume(tmp_path, shards):
+    ckpt = run_pretrain_cli(tmp_path, shards, "two", nproc=2, **{"--micro-batch": "2"})
+    uninterrupted = GPT.load(ckpt / "final")
+    shutil.rmtree(ckpt / "final")
+    shutil.rmtree(ckpt / "step_000006")
+    run_pretrain_cli(tmp_path, shards, "two", nproc=2, **{"--micro-batch": "2", "--resume": ""})
+    resumed = GPT.load(ckpt / "final")
+    for pa, pb in zip(uninterrupted.parameters(), resumed.parameters(), strict=True):
+        torch.testing.assert_close(pa, pb, rtol=0, atol=0)
+
+
+def test_compiled_run_saves_loadable_checkpoints(tmp_path, shards):
+    pretrain(TINY, tiny_run(tmp_path, shards, compile=True, max_tokens=32 * 4))
+    loaded = GPT.load(tmp_path / "checkpoints" / "tiny" / "final")
+    assert loaded.config == TINY
+    torch.testing.assert_close(
+        loaded.tok_emb.weight,
+        GPT.load(tmp_path / "checkpoints" / "tiny" / "step_000004").tok_emb.weight,
+    )
+
+
+def test_logs_mfu_eta_and_cost(tmp_path, shards):
+    config = tiny_run(tmp_path, shards, hourly_rate=2.5, gpu_peak_tflops=1.0)
+    pretrain(TINY, config)
+    rows = [r for r in read_metrics(tmp_path / "results" / "tiny") if r["split"] == "train"]
+    n_params = sum(p.numel() for p in GPT(TINY).parameters())
+    for row in rows:
+        tokens_per_s, elapsed = float(row["tokens_per_s"]), float(row["elapsed_s"])
+        assert float(row["mfu"]) == pytest.approx(6 * n_params * tokens_per_s / 1e12, rel=0.01)
+        assert float(row["cost_usd"]) == pytest.approx(elapsed / 3600 * 2.5, abs=1e-3)
+        done = int(row["step"])
+        assert float(row["eta_s"]) == pytest.approx((8 - done) * 32 / tokens_per_s, rel=0.01, abs=1)
+    assert float(rows[-1]["eta_s"]) == 0
+
+
+def test_stops_at_budget_check_when_projected_cost_is_too_high(tmp_path, shards, capsys):
+    config = tiny_run(tmp_path, shards, hourly_rate=1e9, budget=75.0, budget_check_step=4)
+    pretrain(TINY, config)
+    ckpt = tmp_path / "checkpoints" / "tiny"
+    assert (ckpt / "step_000004" / "optimizer.pt").is_file()
+    assert not (ckpt / "final").exists()
+    rows = read_metrics(tmp_path / "results" / "tiny")
+    assert max(int(r["step"]) for r in rows) == 4
+    out = capsys.readouterr().out
+    assert "over budget" in out and "already spent" in out
+
+
+def test_budget_hint_covers_the_affordable_steps(tmp_path, shards, capsys):
+    config = tiny_run(
+        tmp_path, shards, hourly_rate=3600.0, budget=1.0, max_tokens=32 * 10**9, budget_check_step=2
+    )
+    pretrain(TINY, config)
+    out = capsys.readouterr().out
+    hinted = int(out.split("--max-tokens ")[1].split()[0])
+    assert hinted % 32 == 0
+    assert 2 * 32 < hinted < config.max_tokens
+
+
+def test_warns_when_cost_is_not_tracked(tmp_path, shards, capsys):
+    pretrain(TINY, tiny_run(tmp_path, shards, max_tokens=32 * 2))
+    assert "--hourly-rate" in capsys.readouterr().out
+
+
+def test_runs_past_budget_check_when_within_budget(tmp_path, shards):
+    pretrain(TINY, tiny_run(tmp_path, shards, hourly_rate=0.01, budget_check_step=4))
+    assert (tmp_path / "checkpoints" / "tiny" / "final").is_dir()
+
+
+def test_writes_loss_plot(tmp_path, shards):
+    pretrain(TINY, tiny_run(tmp_path, shards))
+    plot = tmp_path / "results" / "tiny" / "loss.png"
+    assert plot.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_downloads_shards_when_repo_is_given(tmp_path, shards, monkeypatch):
+    requested = []
+
+    def fake_snapshot_download(repo_id, **kw):
+        requested.append(repo_id)
+        shutil.copytree(shards, kw["local_dir"], dirs_exist_ok=True)
+        return str(kw["local_dir"])
+
+    monkeypatch.setattr("ullm.data.snapshot_download", fake_snapshot_download)
+    empty = tmp_path / "fresh"
+    pretrain(TINY, tiny_run(tmp_path, empty, shards_repo="someone/shards", max_tokens=32 * 2))
+    assert requested == ["someone/shards"]
+    assert (tmp_path / "checkpoints" / "tiny" / "final").is_dir()
+
+
+def test_budget_stop_saves_checkpoint_between_regular_checkpoints(tmp_path, shards):
+    pretrain(TINY, tiny_run(tmp_path, shards, hourly_rate=1e9, budget_check_step=3))
+    assert (tmp_path / "checkpoints" / "tiny" / "step_000003" / "optimizer.pt").is_file()
+
+
+def test_two_processes_stop_together_at_budget_check(tmp_path, shards):
+    flags = {"--micro-batch": "2", "--hourly-rate": "1e9", "--budget-check-step": "2"}
+    ckpt = run_pretrain_cli(tmp_path, shards, "two", nproc=2, **flags)
+    assert (ckpt / "step_000002" / "optimizer.pt").is_file()
+    assert not (ckpt / "final").exists()
