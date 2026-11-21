@@ -48,7 +48,7 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
   - Weights on HF Hub.
 - Needs: M3.
 - Features:
-  - F1. Real run: 8×H100 pre-train, try `ullm complete`, publish weights. Docs: tasks. Needs: M3 F2. Status: not started.
+  - F1. Real run: 4×H100 pre-train (no 8× capacity), try `ullm complete`, publish weights. Docs: tasks. Needs: M3 F2. Status: done.
 
 ## M5. Assistant
 - Delivers: assistant model that chats, weights on HF Hub.

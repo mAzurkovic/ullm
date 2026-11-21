@@ -59,7 +59,7 @@ ssh -p <port> root@<host>
 nvidia-smi                                   # GPUs, memory; "CUDA Version" must be 13.0 or newer
 apt-get update && apt-get install -y git curl tmux build-essential
 curl -LsSf https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env
-git clone https://github.com/mAzurkovic/ullm.git && cd ullm
+git clone https://github.com/mAzurkovic/ullm.git && cd ullm && pwd   # note this path for step 6 (Vast.ai: /workspace/ullm)
 uv sync
 ```
 
@@ -96,8 +96,8 @@ watch -n 5 nvidia-smi                        # GPU load and memory
 
 ```sh
 mkdir -p results checkpoints/<name>
-scp -P <port> -r root@<host>:ullm/results/<name> results/
-scp -P <port> -r root@<host>:ullm/checkpoints/<name>/final checkpoints/<name>/
+scp -P <port> -r root@<host>:<repo path>/results/<name> results/
+scp -P <port> -r root@<host>:<repo path>/checkpoints/<name>/final checkpoints/<name>/
 ls -la results/<name> checkpoints/<name>/final   # metrics.csv, loss.png, model.safetensors
 ```
 

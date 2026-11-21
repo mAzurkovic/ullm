@@ -35,7 +35,7 @@ This is the **base model**: it continues text. It does not follow instructions o
 |---|---|
 | Data | [FineWeb-Edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu) `sample-10BT`, tokenized: [mattiasz/ullm-fineweb-edu-shards](https://huggingface.co/datasets/mattiasz/ullm-fineweb-edu-shards) |
 | Tokens | 7B (about 20 tokens per parameter) |
-| Hardware | 8 × NVIDIA H100 SXM |
+| Hardware | 4 × NVIDIA H100 SXM |
 | Optimizer | AdamW, β = (0.9, 0.95), weight decay 0.1 on matrices |
 | Schedule | peak LR 3e-4, 700 warmup steps, cosine decay to 10% |
 | Batch | 512 × 1024 tokens per step, 13,351 steps |
