@@ -36,7 +36,7 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
 - Needs: M2.
 - Features:
   - F1. Loop: AdamW, schedule, logging, val loss, samples, checkpoints, overfit test. Docs: tasks. Needs: M1 F1, M2 F2. Status: done.
-  - F2. Multi-GPU + test run: DDP, bf16, torch.compile, cost/ETA, 1×H100 test run. Docs: tasks. Needs: F1. Status: not started.
+  - F2. Multi-GPU + test run: DDP, bf16, torch.compile, cost/ETA, 1×H100 test run. Docs: tasks. Needs: F1. Status: done.
 
 ## M4. Base model
 - Delivers: trained base model that beats GPT-2 small, weights on HF Hub.

@@ -1,0 +1,41 @@
+{
+  "model": {
+    "n_layers": 24,
+    "d_model": 1024,
+    "n_heads": 16,
+    "mlp_hidden": 2816,
+    "context_length": 1024,
+    "vocab_size": 50304
+  },
+  "train": {
+    "run": "h100-test",
+    "data": "data/shards",
+    "shards_repo": "",
+    "results_dir": "results",
+    "checkpoints_dir": "checkpoints",
+    "batch_tokens": 524288,
+    "micro_batch": 16,
+    "max_tokens": 50000000,
+    "peak_lr": 0.0003,
+    "warmup_steps": 700,
+    "min_lr_ratio": 0.1,
+    "weight_decay": 0.1,
+    "beta1": 0.9,
+    "beta2": 0.95,
+    "grad_clip": 1.0,
+    "log_every": 10,
+    "val_every": 50,
+    "sample_every": 95,
+    "checkpoint_every": 40,
+    "val_batches": 20,
+    "seed": 0,
+    "device": "cuda",
+    "compile": true,
+    "hourly_rate": 3.386,
+    "budget": 7.0,
+    "budget_check_step": 50,
+    "gpu_peak_tflops": 989.0,
+    "resume": true
+  },
+  "world_size": 1
+}
