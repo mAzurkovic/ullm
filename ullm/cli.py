@@ -1,9 +1,11 @@
 import argparse
+import os
 from collections.abc import Callable, Collection, Sequence
 from pathlib import Path
 
 import torch
 
+from ullm.data import prepare_pretrain
 from ullm.generate import generate
 from ullm.model import GPT
 from ullm.tokenizer import ASSISTANT, END, ENDOFTEXT, Message, StreamDecoder, encode, render_chat
@@ -12,6 +14,9 @@ from ullm.tokenizer import ASSISTANT, END, ENDOFTEXT, Message, StreamDecoder, en
 def main(argv: Sequence[str] | None = None) -> None:
     parser = _parser()
     args = parser.parse_args(argv)
+    if args.command == "prepare":
+        prepare_pretrain(args.out, args.num_shards, args.workers, args.push)
+        return
     if args.command == "complete" and not args.prompt:
         parser.error("prompt must not be empty")
     if not args.temperature >= 0 or args.top_k < 0 or args.max_new_tokens < 1:
@@ -107,4 +112,9 @@ def _parser() -> argparse.ArgumentParser:
     complete = commands.add_parser("complete", parents=[sampling], help="continue a text prompt")
     complete.add_argument("prompt")
     commands.add_parser("chat", parents=[sampling], help="chat with the assistant model")
+    prepare = commands.add_parser("prepare", help="tokenize FineWeb-Edu into pre-train shards")
+    prepare.add_argument("--out", type=Path, default=Path("data/shards"))
+    prepare.add_argument("--num-shards", type=int, default=71)
+    prepare.add_argument("--workers", type=int, default=os.cpu_count())
+    prepare.add_argument("--push", metavar="REPO", help="HF Hub dataset repo to upload to")
     return parser

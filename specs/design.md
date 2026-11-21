@@ -26,7 +26,7 @@
 - Libraries:
   - PyTorch: tensors, autograd, AdamW, `torch.compile`, bf16 autocast, DDP, `scaled_dot_product_attention`.
   - `tiktoken`: GPT-2 encoding, extended with 3 chat special tokens.
-  - HF `datasets`: download FineWeb-Edu and smol-smoltalk.
+  - `huggingface_hub` + `pyarrow`: download and read FineWeb-Edu and smol-smoltalk parquet files, upload shards and weights.
   - `lm-evaluation-harness` (EleutherAI): HellaSwag, WikiText.
   - HF `transformers`: only to load GPT-2 small as the eval baseline.
 - Not used: pretrained weights for our model, Lightning, HF Trainer.
@@ -74,8 +74,8 @@ flowchart LR
   H -->|download| D
 ```
 
-Steps 1 to 4 run once on the Mac (~40 GB free disk). Step 5 runs on the 8×H100 node.
-1. `ullm prepare` downloads `sample-10BT` with HF `datasets`.
+Steps 1 to 4 run once on the Mac (~16 GB free disk). Step 5 runs on the 8×H100 node.
+1. `ullm prepare` downloads `sample-10BT` parquet files one at a time with `huggingface_hub`, reads the text with `pyarrow`, and deletes each file after use. It stops downloading once the shards are full.
 2. Tokenize in parallel with GPT-2 `tiktoken`, append `<|endoftext|>` after each document.
 3. Write `uint16` shards of 100M tokens. Shard 0 held out for validation.
 4. Push shards to a public HF Hub dataset repo, then delete raw data and local shards.
