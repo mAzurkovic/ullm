@@ -14,13 +14,22 @@ The goal is to demystify LLMs by building every core part by hand: the transform
 | Block | RoPE, RMSNorm (pre-norm), SwiGLU, no biases, tied embeddings |
 | Context | 1024 tokens |
 | Tokenizer | GPT-2 (`tiktoken`) + 3 chat tokens: `<\|user\|>`, `<\|assistant\|>`, `<\|end\|>` |
-| Pre-training | ~7B FineWeb-Edu tokens on one 8×H100 node, ~1.5 h, ≤ $75 |
+| Pre-training | 7B FineWeb-Edu tokens on 4×H100, 3.3 h, $23 |
+| Base model | [mattiasz/ullm-base](https://huggingface.co/mattiasz/ullm-base) |
 | Pre-train data | [mattiasz/ullm-fineweb-edu-shards](https://huggingface.co/datasets/mattiasz/ullm-fineweb-edu-shards): 71 tokenized shards (shard 0 = validation) |
 | Fine-tuning | SFT on smol-smoltalk, 1×H100 |
 | Target | Beat GPT-2 small (124M) on HellaSwag and WikiText-103 |
 | Inference | CLI on CUDA, Apple Silicon (MPS), or CPU |
 
 We write the model, training (pre-train and SFT), data pipeline glue, inference, and CLI. Libraries handle tensors and autograd (PyTorch), tokenization (`tiktoken`), dataset download and upload (`huggingface_hub`, `pyarrow`), and benchmarks (`lm-evaluation-harness`). No pretrained weights are used for our model.
+
+## Pre-training
+
+Training loss over 13,351 steps (7B tokens). Final val loss 2.881. Details: [results/base-7b](results/base-7b/results.md).
+
+<p align="center">
+  <img src="results/base-7b/loss.png" alt="Pre-training loss: train and val loss fall from 10.05 to 2.88 over 13,351 steps" width="720">
+</p>
 
 ## Setup
 
