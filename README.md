@@ -26,6 +26,7 @@ The goal is to demystify LLMs by building every core part by hand: the transform
 | Pre-train data | [mattiasz/ullm-fineweb-edu-shards](https://huggingface.co/datasets/mattiasz/ullm-fineweb-edu-shards): 71 tokenized shards (shard 0 = validation) |
 | Fine-tuning | SFT on 384K [smol-smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smol-smoltalk) conversations on 1×H100, 57 min, $3 |
 | Target | Beat GPT-2 small (124M) on HellaSwag and WikiText-103 |
+| Benchmarks | WikiText word perplexity 35.75 vs GPT-2's 40.03; HellaSwag tie at 0.35 (20 examples each, [details](results/ullm-base-eval/results.md)) |
 | Inference | CLI on CUDA, Apple Silicon (MPS), or CPU |
 
 We write the model, training (pre-train and SFT), data pipeline glue, inference, and CLI. Libraries handle tensors and autograd (PyTorch), tokenization (`tiktoken`), dataset download and upload (`huggingface_hub`, `pyarrow`), and benchmarks (`lm-evaluation-harness`). No pretrained weights are used for our model.
