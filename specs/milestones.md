@@ -59,7 +59,7 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
   - Weights on HF Hub, README has one command per stage.
 - Needs: M4.
 - Features:
-  - F1. SFT: smol-smoltalk prep with loss mask, masked-loss training, 1×H100 run. Docs: tasks. Needs: M4 F1. Status: in progress.
+  - F1. SFT: smol-smoltalk prep with loss mask, masked-loss training, 1×H100 run. Docs: tasks. Needs: M4 F1. Status: done.
   - F2. Publish: assistant weights on HF Hub, README. Docs: tasks. Needs: F1. Status: not started.
 
 ## M6. Evaluation (P1, last)

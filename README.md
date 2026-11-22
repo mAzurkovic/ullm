@@ -114,7 +114,7 @@ Only when the files are there, **destroy** the instance in the Vast.ai console. 
 
 ## Fine-tune the assistant
 
-Supervised fine-tuning (SFT) turns the base model into a chat assistant. It trains on [smol-smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smol-smoltalk) conversations for 1 epoch, and the loss counts only the assistant's tokens. One H100 is enough: about 45 minutes.
+Supervised fine-tuning (SFT) turns the base model into a chat assistant. It trains on [smol-smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smol-smoltalk) conversations for 1 epoch, and the loss counts only the assistant's tokens. One H100 is enough: 57 minutes and $3 on an H100 NVL. Results: [`results/sft/results.md`](results/sft/results.md).
 
 Rent and set up the node as in steps 1 and 2 above, with **1 GPU**. Then, inside `tmux`:
 
