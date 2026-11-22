@@ -2,7 +2,7 @@
   <img src="assets/banner.svg" alt="ullm" width="720">
 </p>
 
-**μllm** (micro-LLM, or `ullm`) is a small, modern, fully featured large language model built from scratch. It has a pre-trained **base model** and a fine-tuned **assistant model** for chat.
+**ullm** (micro-LLM) is a small, modern, fully featured large language model built from scratch. It has a pre-trained **base model** and a fine-tuned **assistant model** for chat.
 
 The goal is to demystify LLMs by building every core part by hand: the transformer, the training loop, and inference. See [intro.md](intro.md) for the motivation.
 
