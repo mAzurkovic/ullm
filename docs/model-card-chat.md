@@ -12,7 +12,7 @@ tags:
 - chat
 ---
 
-# μllm chat (ullm-chat)
+# ullm-chat
 
 A 360M-parameter chat model built from scratch with [ullm](https://github.com/mAzurkovic/ullm), a small, readable GPT implementation built to learn how LLMs work end to end.
 

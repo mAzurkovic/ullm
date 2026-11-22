@@ -12,7 +12,7 @@ tags:
 - base-model
 ---
 
-# μllm base (ullm-base)
+# ullm-base
 
 A 360M-parameter decoder-only language model trained from scratch with [ullm](https://github.com/mAzurkovic/ullm), a small, readable GPT implementation built to learn how LLMs work end to end.
 
