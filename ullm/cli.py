@@ -113,20 +113,27 @@ def _stream(
     return "".join(pieces)
 
 
-def _parser() -> argparse.ArgumentParser:
+def _sampling(temperature: float) -> argparse.ArgumentParser:
     sampling = argparse.ArgumentParser(add_help=False)
     sampling.add_argument("--model", type=Path, required=True, help="checkpoint directory")
-    sampling.add_argument("--temperature", type=float, default=0.8)
+    sampling.add_argument("--temperature", type=float, default=temperature)
     sampling.add_argument("--top-k", type=int, default=50)
     sampling.add_argument("--max-new-tokens", type=int, default=256)
     sampling.add_argument("--seed", type=int, default=None)
     sampling.add_argument("--device", choices=["cuda", "mps", "cpu"], default=None)
+    return sampling
 
+
+def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ullm")
     commands = parser.add_subparsers(dest="command", required=True)
-    complete = commands.add_parser("complete", parents=[sampling], help="continue a text prompt")
+    complete = commands.add_parser(
+        "complete", parents=[_sampling(temperature=0.8)], help="continue a text prompt"
+    )
     complete.add_argument("prompt")
-    commands.add_parser("chat", parents=[sampling], help="chat with the assistant model")
+    commands.add_parser(
+        "chat", parents=[_sampling(temperature=0.5)], help="chat with the assistant model"
+    )
     prepare = commands.add_parser("prepare", help="tokenize FineWeb-Edu into pre-train shards")
     prepare.add_argument("--out", type=Path, default=Path("data/shards"))
     prepare.add_argument("--num-shards", type=int, default=71)

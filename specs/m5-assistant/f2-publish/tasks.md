@@ -8,9 +8,9 @@ Scope: put the SFT weights (`checkpoints/sft/final/`) on the Hub as `mattiasz/ul
 - [x] 1.3 `docs/model-card-base.md`: link "The chat model" to `mattiasz/ullm-chat`. File committed.
 
 ## 2. The chat weights are on the Hub [serial, needs 1]
-- [ ] 2.1 User uploads from the Mac: `cp docs/model-card-chat.md checkpoints/sft/final/README.md`, then `uv run hf upload mattiasz/ullm-chat checkpoints/sft/final .`. Repo shows `model.safetensors`, `config.json`, `README.md`.
-- [ ] 2.2 User updates the base card: `uv run hf upload mattiasz/ullm-base docs/model-card-base.md README.md`. Base repo page links to the chat repo.
-- [ ] 2.3 On the Mac: `uv run hf download mattiasz/ullm-chat --local-dir checkpoints/ullm-chat`, then `uv run ullm chat --model checkpoints/ullm-chat`, 1 question; paste. Claude checks the reply ends its turn (published copy works).
+- [x] 2.1 User uploads from the Mac: `cp docs/model-card-chat.md checkpoints/sft/final/README.md`, then `uv run hf upload mattiasz/ullm-chat checkpoints/sft/final .`. Repo shows `model.safetensors`, `config.json`, `README.md`.
+- [x] 2.2 User updates the base card: `uv run hf upload mattiasz/ullm-base docs/model-card-base.md README.md`. Base repo page links to the chat repo.
+- [x] 2.3 On the Mac: `uv run hf download mattiasz/ullm-chat --local-dir checkpoints/ullm-chat`, then `uv run ullm chat --model checkpoints/ullm-chat`, 1 question; paste. Claude checks the reply ends its turn (published copy works).
 
 ## 3. The README has one command per stage [parallel, needs 1]
 - [x] 3.1 `README.md` "At a glance": add an "Assistant model" row linking `mattiasz/ullm-chat`; "Fine-tuning" row gets the measured run (smol-smoltalk, 1 × H100, 57 min, $3).
