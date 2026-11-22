@@ -16,8 +16,9 @@ The goal is to demystify LLMs by building every core part by hand: the transform
 | Tokenizer | GPT-2 (`tiktoken`) + 3 chat tokens: `<\|user\|>`, `<\|assistant\|>`, `<\|end\|>` |
 | Pre-training | 7B FineWeb-Edu tokens on 4×H100, 3.3 h, $23 |
 | Base model | [mattiasz/ullm-base](https://huggingface.co/mattiasz/ullm-base) |
+| Assistant model | [mattiasz/ullm-chat](https://huggingface.co/mattiasz/ullm-chat) |
 | Pre-train data | [mattiasz/ullm-fineweb-edu-shards](https://huggingface.co/datasets/mattiasz/ullm-fineweb-edu-shards): 71 tokenized shards (shard 0 = validation) |
-| Fine-tuning | SFT on smol-smoltalk, 1×H100 |
+| Fine-tuning | SFT on 384K smol-smoltalk conversations on 1×H100, 57 min, $3 |
 | Target | Beat GPT-2 small (124M) on HellaSwag and WikiText-103 |
 | Inference | CLI on CUDA, Apple Silicon (MPS), or CPU |
 
@@ -29,6 +30,14 @@ Training loss over 13,351 steps (7B tokens). Final val loss 2.881. Details: [res
 
 <p align="center">
   <img src="results/base-7b/loss.png" alt="Pre-training loss: train and val loss fall from 10.05 to 2.88 over 13,351 steps" width="720">
+</p>
+
+## Fine-tuning
+
+Loss on the assistant's tokens over 6,003 steps (1 epoch of smol-smoltalk). Final val loss 1.248. Details: [results/sft](results/sft/results.md).
+
+<p align="center">
+  <img src="results/sft/loss.png" alt="Fine-tuning loss: train loss falls from 2.30 and val loss from 1.57 to 1.25 over 6,003 steps" width="720">
 </p>
 
 ## Setup
@@ -44,15 +53,24 @@ uv run pytest
 
 ## Usage
 
-Planned: one command per stage.
+Try the published models on a Mac, a CUDA machine, or CPU:
 
 ```sh
-uv run ullm prepare                                  # tokenize FineWeb-Edu into shards
-uv run torchrun --nproc_per_node=8 -m ullm pretrain  # pre-train the base model (see below)
-uv run ullm sft                                      # fine-tune the assistant
-uv run ullm eval                                     # benchmarks and human-judged tests
-uv run ullm complete "The meaning of life is"        # base model completion
-uv run ullm chat                                     # chat with the assistant
+uv run hf download mattiasz/ullm-base --local-dir checkpoints/ullm-base
+uv run hf download mattiasz/ullm-chat --local-dir checkpoints/ullm-chat
+uv run ullm complete "The meaning of life is" --model checkpoints/ullm-base  # base model completion
+uv run ullm chat --model checkpoints/ullm-chat                               # chat with the assistant
+```
+
+Build them again, one command per stage. Pre-training and fine-tuning run on a GPU node (see below):
+
+```sh
+uv run ullm prepare                                                          # tokenize FineWeb-Edu into shards
+uv run torchrun --standalone --nproc_per_node=4 -m ullm pretrain \
+  --run base-7b --device cuda --compile --shards-repo mattiasz/ullm-fineweb-edu-shards  # pre-train the base model
+uv run ullm prepare-sft                                                      # tokenize smol-smoltalk
+uv run ullm sft --base checkpoints/ullm-base --run sft --device cuda --compile  # fine-tune the assistant
+uv run ullm eval                                                             # benchmarks (not built yet)
 ```
 
 ## Train on a GPU node

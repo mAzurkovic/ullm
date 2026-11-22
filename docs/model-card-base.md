@@ -16,7 +16,7 @@ tags:
 
 A 360M-parameter decoder-only language model trained from scratch with [ullm](https://github.com/mAzurkovic/ullm), a small, readable GPT implementation built to learn how LLMs work end to end.
 
-This is the **base model**: it continues text. It does not follow instructions or chat. The chat model is trained from it with supervised fine-tuning.
+This is the **base model**: it continues text. It does not follow instructions or chat. The chat model, [mattiasz/ullm-chat](https://huggingface.co/mattiasz/ullm-chat), is trained from it with supervised fine-tuning.
 
 ## Model
 
