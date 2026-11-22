@@ -18,10 +18,10 @@ Data facts (test split, 24,229 conversations): 15% have a `system` message; all 
 
 ## 3. The 1×H100 SFT run gives a chat model [serial, needs 2]
 - [x] 3.1 README: "Fine-tune the assistant" steps for the GPU node: `hf download mattiasz/ullm-base`, `ullm prepare-sft`, `ullm sft`, `ullm chat`.
-- [ ] 3.2 User rents 1×H100 SXM, runs README setup, then `uv run ullm prepare-sft` (pastes the counts and the decoded row; Claude checks the mask covers only assistant text and its `<|end|>`), then `uv run ullm sft --base checkpoints/ullm-base --run sft --device cuda --compile --hourly-rate <node price>`; pastes first logs. Claude checks tok/s ≈ 150K, ETA ≈ 45 min, step-200 budget check.
-- [ ] 3.3 User pastes val loss and samples near the end. Claude checks val loss falls and samples answer and end with `<|end|>`.
-- [ ] 3.4 On the node: `uv run ullm chat --model checkpoints/sft/final`, 3 turns. Answers stay on topic, the turn stops, no `<|user|>` text written.
-- [ ] 3.5 User copies `results/sft/` and `checkpoints/sft/final/` to the Mac, checks files, destroys the node. Claude writes `results/sft/results.md` and commits `results/sft/`.
+- [x] 3.2 User rents 1×H100 SXM, runs README setup, then `uv run ullm prepare-sft` (pastes the counts and the decoded row; Claude checks the mask covers only assistant text and its `<|end|>`), then `uv run ullm sft --base checkpoints/ullm-base --run sft --device cuda --compile --hourly-rate <node price>`; pastes first logs. Claude checks tok/s ≈ 150K, ETA ≈ 45 min, step-200 budget check.
+- [x] 3.3 User pastes val loss and samples near the end. Claude checks val loss falls and samples answer and end with `<|end|>`.
+- [x] 3.4 On the node: `uv run ullm chat --model checkpoints/sft/final`, 3 turns. Answers stay on topic, the turn stops, no `<|user|>` text written.
+- [x] 3.5 User copies `results/sft/` and `checkpoints/sft/final/` to the Mac, checks files, destroys the node. Claude writes `results/sft/results.md` and commits `results/sft/`.
 
 ## Dependencies
 - 2 needs 1.
