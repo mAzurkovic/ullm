@@ -1,16 +1,18 @@
 import shutil
 import time
-from collections.abc import Iterable, Iterator, Sequence
-from itertools import batched
+from collections.abc import Iterable, Iterator, Mapping, Sequence
+from functools import partial
+from itertools import batched, islice
 from multiprocessing import Pool
 from pathlib import Path
+from typing import NamedTuple
 
 import numpy as np
 import pyarrow.parquet as pq
 import torch
 from huggingface_hub import HfApi, hf_hub_download, snapshot_download
 
-from ullm.tokenizer import ENDOFTEXT, encode
+from ullm.tokenizer import ENDOFTEXT, Message, decode, encode, render_chat
 
 SHARD_DTYPE = np.uint16
 SHARD_TOKENS = 100_000_000
@@ -18,6 +20,10 @@ TOKENIZE_BATCH = 8192
 SHARD_PATTERN = "shard_*.bin"
 FINEWEB_REPO = "HuggingFaceFW/fineweb-edu"
 FINEWEB_FILES = "sample/10BT/"
+SFT_REPO = "HuggingFaceTB/smol-smoltalk"
+SFT_SPLITS = {"train": "data/train-", "val": "data/test-"}
+SFT_ROW_TOKENS = 1024 + 1
+IGNORE_INDEX = -100
 
 DATASET_CARD = """---
 license: odc-by
@@ -144,6 +150,104 @@ def _fineweb_texts(raw: Path) -> Iterator[str]:
         path.unlink()
 
 
+class SFTExample(NamedTuple):
+    ids: list[int]
+    mask: list[int]
+    truncated: bool
+
+
+def sft_example(
+    messages: Sequence[Mapping[str, str]], max_tokens: int = SFT_ROW_TOKENS
+) -> SFTExample | None:
+    roles = [m["role"] for m in messages]
+    if len(roles) < 2 or roles != [("user", "assistant")[i % 2] for i in range(len(roles))]:
+        return None
+    ids: list[int] = []
+    mask: list[int] = []
+    kept = 0
+    for user, assistant in zip(messages[::2], messages[1::2], strict=False):
+        pair_ids, pair_mask = render_chat(
+            [Message("user", user["content"]), Message("assistant", assistant["content"])]
+        )
+        if len(ids) + len(pair_ids) > max_tokens:
+            break
+        ids += pair_ids
+        mask += pair_mask
+        kept += 1
+    if not kept:
+        return None
+    return SFTExample(ids, mask, truncated=2 * kept < len(messages))
+
+
+def prepare_sft(
+    directory: Path, workers: int, limit: int | None = None, row_tokens: int = SFT_ROW_TOKENS
+) -> None:
+    raw = directory / "raw"
+    directory.mkdir(parents=True, exist_ok=True)
+    files = HfApi().list_repo_files(SFT_REPO, repo_type="dataset")
+    try:
+        with Pool(workers) as pool:
+            for split, prefix in SFT_SPLITS.items():
+                names = sorted(f for f in files if f.startswith(prefix) and f.endswith(".parquet"))
+                conversations = islice(_smoltalk_conversations(names, raw), limit)
+                examples = pool.imap(
+                    partial(sft_example, max_tokens=row_tokens), conversations, chunksize=256
+                )
+                ids, mask = _write_sft_split(directory, split, examples, row_tokens)
+                if split == "train" and len(ids):
+                    print(_show_mask(ids[0], mask[0]), flush=True)
+    finally:
+        shutil.rmtree(raw, ignore_errors=True)
+
+
+def _smoltalk_conversations(names: Sequence[str], raw: Path) -> Iterator[list[dict[str, str]]]:
+    for name in names:
+        path = Path(hf_hub_download(SFT_REPO, name, repo_type="dataset", local_dir=raw))
+        for batch in pq.ParquetFile(path).iter_batches(columns=["messages"]):
+            yield from batch.column("messages").to_pylist()
+        path.unlink()
+
+
+def _write_sft_split(
+    directory: Path, split: str, examples: Iterable[SFTExample | None], row_tokens: int
+) -> tuple[np.ndarray, np.ndarray]:
+    id_rows, mask_rows = [], []
+    skipped = truncated = assistant_tokens = 0
+    for example in examples:
+        if example is None:
+            skipped += 1
+            continue
+        pad = row_tokens - len(example.ids)
+        id_rows.append(np.array(example.ids + [ENDOFTEXT] * pad, dtype=SHARD_DTYPE))
+        mask_rows.append(np.array(example.mask + [0] * pad, dtype=np.uint8))
+        truncated += example.truncated
+        assistant_tokens += sum(example.mask)
+    ids = np.stack(id_rows) if id_rows else np.empty((0, row_tokens), dtype=SHARD_DTYPE)
+    mask = np.stack(mask_rows) if mask_rows else np.empty((0, row_tokens), dtype=np.uint8)
+    np.save(directory / f"{split}_ids.npy", ids)
+    np.save(directory / f"{split}_mask.npy", mask)
+    print(
+        f"{split}: kept {len(ids):,} | skipped {skipped:,} | truncated {truncated:,} | "
+        f"assistant tokens {assistant_tokens:,}",
+        flush=True,
+    )
+    return ids, mask
+
+
+def _show_mask(ids: np.ndarray, mask: np.ndarray) -> str:
+    """Decode a row, wrapping the tokens the model learns from in [[ ]]."""
+    end = len(ids)
+    while end and ids[end - 1] == ENDOFTEXT and not mask[end - 1]:
+        end -= 1
+    pieces, start = [], 0
+    for i in range(1, end + 1):
+        if i == end or mask[i] != mask[start]:
+            text = decode(ids[start:i].tolist())
+            pieces.append(f"[[{text}]]" if mask[start] else text)
+            start = i
+    return "".join(pieces)
+
+
 class TokenLoader:
     def __init__(
         self,
@@ -187,12 +291,58 @@ class TokenLoader:
                 for start in range(begin, len(shard) - self.step_tokens, self.step_tokens):
                     first = start + self.rank * block
                     tokens = torch.from_numpy(shard[first : first + block + 1].astype(np.int64))
-                    tokens = self._to_device(tokens)
+                    tokens = _to_device(tokens, self.device)
                     x = tokens[:-1].view(self.batch_size, self.context_length)
                     y = tokens[1:].view(self.batch_size, self.context_length)
                     yield x, y
 
-    def _to_device(self, tensor: torch.Tensor) -> torch.Tensor:
-        if self.device.type == "cuda":
-            return tensor.pin_memory().to(self.device, non_blocking=True)
-        return tensor.to(self.device)
+
+class SFTLoader:
+    """Shuffled micro-batches of fine-tuning rows; targets the model must not learn are ignored."""
+
+    def __init__(
+        self,
+        directory: Path,
+        split: str,
+        batch_size: int,
+        rank: int = 0,
+        world_size: int = 1,
+        device: str | torch.device = "cpu",
+        seed: int = 0,
+    ) -> None:
+        if not 0 <= rank < world_size:
+            raise ValueError(f"rank {rank} out of range for world size {world_size}")
+        self.ids = np.load(directory / f"{split}_ids.npy", mmap_mode="r")
+        self.mask = np.load(directory / f"{split}_mask.npy", mmap_mode="r")
+        if self.ids.ndim != 2 or self.ids.shape != self.mask.shape:
+            raise ValueError(f"{split} ids {self.ids.shape} and mask {self.mask.shape} differ")
+        self.rows, self.row_tokens = self.ids.shape
+        if self.rows < batch_size * world_size:
+            raise ValueError(
+                f"{split} has {self.rows} rows, needs at least {batch_size * world_size}"
+            )
+        self.batch_size = batch_size
+        self.rank = rank
+        self.world_size = world_size
+        self.device = torch.device(device)
+        self.seed = seed
+
+    def __iter__(self) -> Iterator[tuple[torch.Tensor, torch.Tensor]]:
+        slab = self.batch_size * self.world_size
+        rng = np.random.default_rng(self.seed)
+        while True:
+            order = rng.permutation(self.rows)
+            for start in range(0, self.rows - slab + 1, slab):
+                first = start + self.rank * self.batch_size
+                picked = np.sort(order[first : first + self.batch_size])
+                tokens = torch.from_numpy(self.ids[picked].astype(np.int64))
+                learn = torch.from_numpy(self.mask[picked, 1:].astype(bool))
+                x = tokens[:, :-1].contiguous()
+                y = tokens[:, 1:].masked_fill(~learn, IGNORE_INDEX)
+                yield _to_device(x, self.device), _to_device(y, self.device)
+
+
+def _to_device(tensor: torch.Tensor, device: torch.device) -> torch.Tensor:
+    if device.type == "cuda":
+        return tensor.pin_memory().to(device, non_blocking=True)
+    return tensor.to(device)

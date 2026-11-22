@@ -112,6 +112,27 @@ ls -la results/<name> checkpoints/<name>/final   # metrics.csv, loss.png, model.
 
 Only when the files are there, **destroy** the instance in the Vast.ai console. A stopped instance still bills for its disk.
 
+## Fine-tune the assistant
+
+Supervised fine-tuning (SFT) turns the base model into a chat assistant. It trains on [smol-smoltalk](https://huggingface.co/datasets/HuggingFaceTB/smol-smoltalk) conversations for 1 epoch, and the loss counts only the assistant's tokens. One H100 is enough: about 45 minutes.
+
+Rent and set up the node as in steps 1 and 2 above, with **1 GPU**. Then, inside `tmux`:
+
+```sh
+uv run hf download mattiasz/ullm-base --local-dir checkpoints/ullm-base
+uv run ullm prepare-sft
+uv run ullm sft --base checkpoints/ullm-base --run sft --device cuda --compile --hourly-rate <USD per hour>
+```
+
+- `prepare-sft` downloads smol-smoltalk (970 MB), skips conversations with a system message, cuts long ones after the last exchange that fits 1024 tokens, and writes `data/sft/`. It prints the counts and one row with the trained text in `[[ ]]`.
+- `sft` logs like pre-training. The samples are chat replies to 5 fixed questions. It stops at step 200 if the projected cost is over `--budget` (default $25).
+
+Try it, then copy `results/sft` and `checkpoints/sft/final` back as in step 6:
+
+```sh
+uv run ullm chat --model checkpoints/sft/final
+```
+
 ## Project layout
 
 ```
