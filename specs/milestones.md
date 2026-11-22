@@ -71,7 +71,7 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
   - Generation test and assistant test pass human judgment.
 - Needs: M4 (base eval), M5 (assistant eval).
 - Features:
-  - F1. Base eval: lm-eval adapter, GPT-2 baseline, generation test. Docs: tasks (`specs/m4-base-model/f1-eval/`). Needs: M4 F1. Status: in progress, parked on branch `eval` (2.1 open: how to score GPT-2).
+  - F1. Base eval: lm-eval adapter, GPT-2 baseline, generation test. Docs: tasks (`specs/m4-base-model/f1-eval/`). Needs: M4 F1. Status: in progress.
   - F2. Assistant eval: 20 prompts + 3 conversations, results.md. Docs: tasks. Needs: F1, M5 F1. Status: not started.
 
 ## Coverage

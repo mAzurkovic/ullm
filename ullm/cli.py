@@ -15,6 +15,13 @@ from ullm.config import (
     config_from_args,
 )
 from ullm.data import prepare_pretrain, prepare_sft
+from ullm.eval import (
+    generation_test,
+    load_benchmarks,
+    run_benchmarks,
+    save_benchmarks,
+    write_report,
+)
 from ullm.generate import generate
 from ullm.model import GPT, default_device
 from ullm.tokenizer import ASSISTANT, END, ENDOFTEXT, Message, StreamDecoder, encode, render_chat
@@ -29,6 +36,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         return
     if args.command == "prepare-sft":
         prepare_sft(args.out, args.workers, args.limit)
+        return
+    if args.command == "eval":
+        _evaluate(args)
         return
     if args.command == "pretrain":
         pretrain(config_from_args(ModelConfig, args), config_from_args(PretrainConfig, args))
@@ -113,6 +123,22 @@ def _stream(
     return "".join(pieces)
 
 
+def _evaluate(args: argparse.Namespace) -> None:
+    device = args.device or default_device()
+    run_dir = Path("results") / args.run
+    benchmarks = run_benchmarks(args.model, device, args.limit, args.batch_size)
+    save_benchmarks(benchmarks, run_dir / "benchmarks.json")
+    samples = []
+    baseline = None
+    if args.model != "gpt2":
+        model = GPT.load(Path(args.model), device)
+        samples = generation_test(model, max_new_tokens=args.max_new_tokens)
+        if args.baseline.is_file():
+            baseline = load_benchmarks(args.baseline)
+    write_report(run_dir / "results.md", args.run, benchmarks, baseline, samples)
+    print(f"wrote {run_dir / 'results.md'}")
+
+
 def _sampling(temperature: float) -> argparse.ArgumentParser:
     sampling = argparse.ArgumentParser(add_help=False)
     sampling.add_argument("--model", type=Path, required=True, help="checkpoint directory")
@@ -146,6 +172,16 @@ def _parser() -> argparse.ArgumentParser:
     prepare_sft_parser.add_argument("--workers", type=int, default=os.cpu_count())
     prepare_sft_parser.add_argument(
         "--limit", type=int, default=None, help="read at most this many conversations per split"
+    )
+    evaluate = commands.add_parser("eval", help="benchmarks and generation test")
+    evaluate.add_argument("--model", required=True, help="checkpoint directory or gpt2")
+    evaluate.add_argument("--run", required=True, help="name of the results/<run> directory")
+    evaluate.add_argument("--limit", type=int, default=None, help="examples per benchmark")
+    evaluate.add_argument("--device", choices=["cuda", "mps", "cpu"], default=None)
+    evaluate.add_argument("--batch-size", type=int, default=32)
+    evaluate.add_argument("--max-new-tokens", type=int, default=256)
+    evaluate.add_argument(
+        "--baseline", type=Path, default=Path("results/gpt2-small/benchmarks.json")
     )
     pretrain_parser = commands.add_parser("pretrain", help="pre-train the base model")
     add_config_args(pretrain_parser, ModelConfig)
