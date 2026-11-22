@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="μllm" width="720">
+  <img src="assets/banner.svg" alt="uLLM" width="720">
 </p>
 
 **μllm** (micro-LLM, or `ullm`) is a small, modern, fully featured large language model built from scratch. It has a pre-trained **base model** and a fine-tuned **assistant model** for chat.
