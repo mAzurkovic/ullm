@@ -67,7 +67,8 @@ uv run torchrun --standalone --nproc_per_node=4 -m ullm pretrain \
   --run base-7b --device cuda --compile --shards-repo mattiasz/ullm-fineweb-edu-shards  # pre-train the base model
 uv run ullm prepare-sft                                                      # tokenize smol-smoltalk
 uv run ullm sft --base checkpoints/ullm-base --run sft --device cuda --compile  # fine-tune the assistant
-uv run ullm eval                                                             # benchmarks (not built yet)
+uv run ullm eval --model gpt2 --run gpt2-small                              # GPT-2 small baseline
+uv run ullm eval --model checkpoints/ullm-base --run ullm-base              # benchmarks and generation test
 ```
 
 ## Train on a GPU node
