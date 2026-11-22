@@ -94,6 +94,15 @@ def test_ctrl_c_exits_cleanly(checkpoint, capsys, monkeypatch):
     assert capsys.readouterr().out == "\n"
 
 
+def test_shows_loading_message_on_stderr_before_the_prompt(checkpoint, capsys, monkeypatch):
+    monkeypatch.setattr("sys.stdin", io.StringIO(""))
+    main(["chat", "--model", str(checkpoint), "--device", "cpu"])
+    captured = capsys.readouterr()
+    assert f"Loading {checkpoint} on cpu..." in captured.err
+    assert "ready" in captured.err
+    assert "Loading" not in captured.out
+
+
 def test_falls_back_to_cpu_without_gpu(checkpoint, capsys, monkeypatch):
     monkeypatch.setattr("torch.cuda.is_available", lambda: False)
     monkeypatch.setattr("torch.backends.mps.is_available", lambda: False)

@@ -1,5 +1,7 @@
 import argparse
 import os
+import sys
+import time
 from collections.abc import Callable, Collection, Sequence
 from pathlib import Path
 
@@ -41,7 +43,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     if not (args.model / "config.json").is_file():
         parser.error(f"no checkpoint at {args.model}")
 
-    model = GPT.load(args.model, args.device or default_device()).eval()
+    device = args.device or default_device()
+    print(f"Loading {args.model} on {device}...", end=" ", file=sys.stderr, flush=True)
+    start = time.perf_counter()
+    model = GPT.load(args.model, device).eval()
+    print(f"ready ({time.perf_counter() - start:.1f}s)", file=sys.stderr)
     generator = torch.Generator()
     if args.seed is None:
         generator.seed()
