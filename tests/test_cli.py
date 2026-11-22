@@ -103,6 +103,27 @@ def test_shows_loading_message_on_stderr_before_the_prompt(checkpoint, capsys, m
     assert "Loading" not in captured.out
 
 
+@pytest.mark.parametrize(
+    "argv, temperature",
+    [
+        (["chat"], 0.5),
+        (["complete", "Hi"], 0.8),
+        (["chat", "--temperature", "1.2"], 1.2),
+    ],
+)
+def test_default_temperature_is_lower_for_chat(checkpoint, monkeypatch, argv, temperature):
+    used = []
+
+    def record(*args, **kwargs):
+        used.append(kwargs["temperature"])
+        return iter([])
+
+    monkeypatch.setattr("ullm.cli.generate", record)
+    monkeypatch.setattr("sys.stdin", io.StringIO("Hello\n"))
+    main([*argv, "--model", str(checkpoint), "--device", "cpu"])
+    assert used == [temperature]
+
+
 def test_falls_back_to_cpu_without_gpu(checkpoint, capsys, monkeypatch):
     monkeypatch.setattr("torch.cuda.is_available", lambda: False)
     monkeypatch.setattr("torch.backends.mps.is_available", lambda: False)
