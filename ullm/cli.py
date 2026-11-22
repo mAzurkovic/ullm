@@ -5,12 +5,18 @@ from pathlib import Path
 
 import torch
 
-from ullm.config import ModelConfig, PretrainConfig, add_config_args, config_from_args
-from ullm.data import prepare_pretrain
+from ullm.config import (
+    ModelConfig,
+    PretrainConfig,
+    SFTConfig,
+    add_config_args,
+    config_from_args,
+)
+from ullm.data import prepare_pretrain, prepare_sft
 from ullm.generate import generate
 from ullm.model import GPT, default_device
 from ullm.tokenizer import ASSISTANT, END, ENDOFTEXT, Message, StreamDecoder, encode, render_chat
-from ullm.train import pretrain
+from ullm.train import pretrain, sft
 
 
 def main(argv: Sequence[str] | None = None) -> None:
@@ -19,8 +25,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     if args.command == "prepare":
         prepare_pretrain(args.out, args.num_shards, args.workers, args.push)
         return
+    if args.command == "prepare-sft":
+        prepare_sft(args.out, args.workers, args.limit)
+        return
     if args.command == "pretrain":
         pretrain(config_from_args(ModelConfig, args), config_from_args(PretrainConfig, args))
+        return
+    if args.command == "sft":
+        sft(config_from_args(SFTConfig, args))
         return
     if args.command == "complete" and not args.prompt:
         parser.error("prompt must not be empty")
@@ -114,7 +126,17 @@ def _parser() -> argparse.ArgumentParser:
     prepare.add_argument("--num-shards", type=int, default=71)
     prepare.add_argument("--workers", type=int, default=os.cpu_count())
     prepare.add_argument("--push", metavar="REPO", help="HF Hub dataset repo to upload to")
+    prepare_sft_parser = commands.add_parser(
+        "prepare-sft", help="tokenize smol-smoltalk into masked fine-tuning rows"
+    )
+    prepare_sft_parser.add_argument("--out", type=Path, default=Path("data/sft"))
+    prepare_sft_parser.add_argument("--workers", type=int, default=os.cpu_count())
+    prepare_sft_parser.add_argument(
+        "--limit", type=int, default=None, help="read at most this many conversations per split"
+    )
     pretrain_parser = commands.add_parser("pretrain", help="pre-train the base model")
     add_config_args(pretrain_parser, ModelConfig)
     add_config_args(pretrain_parser, PretrainConfig)
+    sft_parser = commands.add_parser("sft", help="fine-tune a base model into the assistant")
+    add_config_args(sft_parser, SFTConfig)
     return parser

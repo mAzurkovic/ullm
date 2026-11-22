@@ -68,16 +68,59 @@ class PretrainConfig:
         return self.batch_tokens // micro_tokens
 
 
+@dataclass(frozen=True)
+class SFTConfig:
+    base: Path
+    run: str = "sft"
+    data: Path = Path("data/sft")
+    results_dir: Path = Path("results")
+    checkpoints_dir: Path = Path("checkpoints")
+    batch_size: int = 64
+    micro_batch: int = 16
+    epochs: int = 1
+    peak_lr: float = 3e-5
+    warmup_steps: int = 100
+    weight_decay: float = 0.1
+    beta1: float = 0.9
+    beta2: float = 0.95
+    grad_clip: float = 1.0
+    log_every: int = 10
+    val_every: int = 250
+    sample_every: int = 500
+    checkpoint_every: int = 1000
+    val_batches: int = 20
+    seed: int = 0
+    device: str = "auto"
+    compile: bool = False
+    hourly_rate: float = 0.0
+    budget: float = 25.0
+    budget_check_step: int = 200
+    gpu_peak_tflops: float = 989.0
+
+    def total_steps(self, rows: int) -> int:
+        return self.epochs * rows // self.batch_size
+
+    def grad_accum_steps(self, world_size: int = 1) -> int:
+        micro_rows = self.micro_batch * world_size
+        if micro_rows < 1 or self.batch_size % micro_rows:
+            raise ValueError(
+                f"batch of {self.batch_size} conversations is not a multiple of micro-batch "
+                f"{self.micro_batch} x {world_size} processes"
+            )
+        return self.batch_size // micro_rows
+
+
 def add_config_args(parser: argparse.ArgumentParser, cls: type) -> None:
     for field in fields(cls):
         flag = "--" + field.name.replace("_", "-")
-        default = field.default if field.default is not MISSING else None
+        required = field.default is MISSING
+        default = None if required else field.default
         if field.type is bool:
             parser.add_argument(flag, action="store_true", default=default)
         elif field.type is int:
-            parser.add_argument(flag, type=_integer, default=default)
+            parser.add_argument(flag, type=_integer, default=default, required=required)
         else:
-            parser.add_argument(flag, type=field.type, default=default)
+            parser.add_argument(flag, type=field.type, default=default, required=required)
 
 
 def config_from_args[T](cls: type[T], args: argparse.Namespace) -> T:
