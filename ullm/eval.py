@@ -13,8 +13,8 @@ from lm_eval.utils import get_rolling_token_windows, make_disjoint_window
 
 from ullm.generate import generate
 from ullm.model import GPT
-from ullm.prompts import BASE_PROMPTS
-from ullm.tokenizer import ENDOFTEXT, decode, encode
+from ullm.prompts import ASSISTANT_CONVERSATIONS, ASSISTANT_PROMPTS, BASE_PROMPTS
+from ullm.tokenizer import ASSISTANT, END, ENDOFTEXT, USER, Message, decode, encode, render_chat
 
 TASKS = ["hellaswag", "wikitext"]
 
@@ -30,6 +30,15 @@ class Sample:
     prompt: str
     seed: int
     text: str
+
+
+@dataclass(frozen=True)
+class Reply:
+    history: list[Message]
+    text: str
+    stopped: bool
+    wrote_user: bool
+    conversation: int | None = None
 
 
 class LogitsLM(LM):
@@ -203,5 +212,79 @@ def write_report(
             lines += ["", f"### {number}. {prompt}", "", "- [ ] pass"]
             for sample in (s for s in samples if s.prompt == prompt):
                 lines += ["", f"**Seed {sample.seed}**", "", "```text", prompt + sample.text, "```"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n")
+
+
+def assistant_test(
+    model: GPT,
+    prompts: Sequence[str] = ASSISTANT_PROMPTS,
+    conversations: Sequence[Sequence[str]] = ASSISTANT_CONVERSATIONS,
+    seed: int = 0,
+    max_new_tokens: int = 256,
+) -> list[Reply]:
+    def reply(history: list[Message], conversation: int | None) -> Reply:
+        ids = list(
+            generate(
+                model,
+                render_chat(history)[0] + [ASSISTANT],
+                max_new_tokens=max_new_tokens,
+                temperature=0.5,
+                top_k=50,
+                stop_ids={END},
+                generator=torch.Generator().manual_seed(seed),
+            )
+        )
+        return Reply(
+            history=history,
+            text=decode(ids),
+            stopped=len(ids) < max_new_tokens,
+            wrote_user=USER in ids,
+            conversation=conversation,
+        )
+
+    replies = [reply([Message("user", prompt)], None) for prompt in prompts]
+    for number, turns in enumerate(conversations):
+        history: list[Message] = []
+        for turn in turns:
+            history = [*history, Message("user", turn)]
+            replies.append(reply(history, number))
+            history = [*history, Message("assistant", replies[-1].text)]
+    return replies
+
+
+def write_assistant_report(path: Path, run: str, replies: Sequence[Reply]) -> None:
+    stopped = sum(r.stopped for r in replies)
+    wrote_user = sum(r.wrote_user for r in replies)
+    lines = [
+        f"# {run}",
+        "",
+        "## Assistant test",
+        "",
+        f"Stopped on `<|end|>`: {stopped} of {len(replies)}. "
+        f"Wrote `<|user|>`: {wrote_user} of {len(replies)}.",
+        "",
+        "Judge each reply: relevant to the prompt and coherent. Wrong facts are acceptable.",
+    ]
+
+    def judged(reply: Reply) -> list[str]:
+        checks = (
+            f"stopped on `<|end|>`: {'yes' if reply.stopped else 'no'} | "
+            f"wrote `<|user|>`: {'yes' if reply.wrote_user else 'no'}"
+        )
+        return ["", f"- [ ] pass ({checks})", "", "```text", reply.text, "```"]
+
+    lines += ["", "## Prompts"]
+    singles = [r for r in replies if r.conversation is None]
+    for number, reply in enumerate(singles, 1):
+        lines += ["", f"### {number}. {reply.history[-1].content}", *judged(reply)]
+
+    lines += ["", "## Conversations"]
+    current = None
+    for reply in (r for r in replies if r.conversation is not None):
+        if reply.conversation != current:
+            current = reply.conversation
+            lines += ["", f"### Conversation {current + 1}"]
+        lines += ["", f"**User:** {reply.history[-1].content}", *judged(reply)]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n")

@@ -72,7 +72,7 @@ Goal: a working base model and assistant model. Each feature: one /to-tasks list
 - Needs: M4 (base eval), M5 (assistant eval).
 - Features:
   - F1. Base eval: lm-eval adapter, GPT-2 baseline, generation test. Docs: tasks (`specs/m4-base-model/f1-eval/`). Needs: M4 F1. Status: done (20-example smoke scores, full sets not run).
-  - F2. Assistant eval: 20 prompts + 3 conversations, results.md. Docs: tasks. Needs: F1, M5 F1. Status: not started.
+  - F2. Assistant eval: 20 prompts + 3 conversations, results.md. Docs: tasks. Needs: F1, M5 F1. Status: in progress.
 
 ## Coverage
 | Requirement or component | Milestones |

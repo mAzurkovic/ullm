@@ -16,10 +16,12 @@ from ullm.config import (
 )
 from ullm.data import prepare_pretrain, prepare_sft
 from ullm.eval import (
+    assistant_test,
     generation_test,
     load_benchmarks,
     run_benchmarks,
     save_benchmarks,
+    write_assistant_report,
     write_report,
 )
 from ullm.generate import generate
@@ -38,6 +40,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         prepare_sft(args.out, args.workers, args.limit)
         return
     if args.command == "eval":
+        if args.assistant and args.model == "gpt2":
+            parser.error("--assistant needs an ullm chat checkpoint, not gpt2")
         _evaluate(args)
         return
     if args.command == "pretrain":
@@ -126,6 +130,13 @@ def _stream(
 def _evaluate(args: argparse.Namespace) -> None:
     device = args.device or default_device()
     run_dir = Path("results") / args.run
+    if args.assistant:
+        replies = assistant_test(
+            GPT.load(Path(args.model), device), max_new_tokens=args.max_new_tokens
+        )
+        write_assistant_report(run_dir / "results.md", args.run, replies)
+        print(f"wrote {run_dir / 'results.md'}")
+        return
     benchmarks = run_benchmarks(args.model, device, args.limit, args.batch_size)
     save_benchmarks(benchmarks, run_dir / "benchmarks.json")
     samples = []
@@ -176,6 +187,9 @@ def _parser() -> argparse.ArgumentParser:
     evaluate = commands.add_parser("eval", help="benchmarks and generation test")
     evaluate.add_argument("--model", required=True, help="checkpoint directory or gpt2")
     evaluate.add_argument("--run", required=True, help="name of the results/<run> directory")
+    evaluate.add_argument(
+        "--assistant", action="store_true", help="run the chat assistant test instead"
+    )
     evaluate.add_argument("--limit", type=int, default=None, help="examples per benchmark")
     evaluate.add_argument("--device", choices=["cuda", "mps", "cpu"], default=None)
     evaluate.add_argument("--batch-size", type=int, default=32)

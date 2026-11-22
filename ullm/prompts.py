@@ -26,3 +26,32 @@ BASE_PROMPTS = [
     "Some of the most important inventions of the 20th century include",
     "Learning a second language as an adult is",
 ]
+
+ASSISTANT_PROMPTS = [
+    "What is the tallest mountain in the world?",
+    "Who wrote the play Romeo and Juliet?",
+    "What is the boiling point of water in Celsius?",
+    "How many continents are there?",
+    "What gas do plants take in from the air?",
+    "Which planet is known as the Red Planet?",
+    "What is the largest ocean on Earth?",
+    "How do I make a cup of tea?",
+    "How can I fall asleep faster?",
+    "How do I change a flat tire on a bicycle?",
+    "How should I prepare for a job interview?",
+    "How do I start running if I have never exercised?",
+    "How can I save money on groceries?",
+    "How do I plant tomatoes in a garden?",
+    "Write a haiku about autumn leaves.",
+    "Write a short story about a robot who learns to paint.",
+    "Describe a sunrise over the mountains.",
+    "Write a limerick about a cat.",
+    "Write a thank-you note to a teacher.",
+    "Invent a name and a slogan for a new coffee shop.",
+]
+
+ASSISTANT_CONVERSATIONS = [
+    ["What is the capital of Italy?", "What is it famous for?", "Name one dish from there."],
+    ["Give me an idea for a weekend hobby.", "Why would I enjoy it?"],
+    ["Write two lines about the sea.", "Now make them about the desert.", "Give the poem a title."],
+]
